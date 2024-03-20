@@ -1,4 +1,4 @@
-# coding: utf-8
+# coding: utf-8-sig
 from json import loads
 from time import sleep, time
 from pickle import dump, load
@@ -8,6 +8,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
 
 class Concert(object):
     def __init__(self, session, price, real_name, nick_name, ticket_num, damai_url, target_url,driver_path):
@@ -27,7 +30,7 @@ class Concert(object):
 
     def isClassPresent(self, item, name, ret=False):
         try:
-            result = item.find_element_by_class_name(name)
+            result = item.find_element(By.ID, name)
             if ret:
                 return result
             else:
@@ -39,7 +42,6 @@ class Concert(object):
     def get_cookie(self):
         self.driver.get(self.damai_url)
         print(u"###请点击登录###")
-        self.driver.find_element_by_class_name('login-user').click()
         while self.driver.title.find('大麦网-全球演出赛事官方购票平台') != -1:  # 等待网页加载完成
             sleep(1)
         print(u"###请扫码登录###")
@@ -75,7 +77,8 @@ class Concert(object):
     def enter_concert(self):
         print(u'###打开浏览器，进入大麦网###')
         if not exists('cookies.pkl'):   # 如果不存在cookie.pkl,就获取一下
-            self.driver = webdriver.Chrome(executable_path=self.driver_path)
+            service = Service(executable_path=self.driver_path)
+            self.driver = webdriver.Chrome(service=service)
             self.get_cookie()
             print(u'###成功获取Cookie，重启浏览器###')
             self.driver.quit()
@@ -90,7 +93,10 @@ class Concert(object):
         # 更换等待策略为不等待浏览器加载完全就进行下一步操作
         capa = DesiredCapabilities.CHROME
         capa["pageLoadStrategy"] = "none"
-        self.driver = webdriver.Chrome(executable_path=self.driver_path, options=options, desired_capabilities=capa)
+        chrome_options = Options()
+        service = Service(executable_path=self.driver_path)
+        self.driver = webdriver.Chrome(service=service, options=options)
+        # self.driver = webdriver.Chrome(service=service, options=options, desired_capabilities=capa)
         # 登录到具体抢购页面
         self.login()
         self.driver.refresh()
@@ -122,7 +128,7 @@ class Concert(object):
                 raise Exception(u"***Error: 页面刷新出错***")
 
             try:
-                buybutton = box.find_element_by_class_name('buybtn') # 寻找立即购买标签
+                buybutton = box.find_element(By.ID, 'buybtn') # 寻找立即购买标签
                 buybutton_text = buybutton.text
             except:
                 raise Exception(u"***Error: buybutton 位置找不到***")
@@ -134,10 +140,10 @@ class Concert(object):
             try:
                 selects = box.find_elements_by_class_name('perform__order__select') # 场次和票档进行定位
                 for item in selects:
-                    if item.find_element_by_class_name('select_left').text == '场次':
+                    if item.find_element(By.ID, 'select_left').text == '场次':
                         session = item
                         # print('\t场次定位成功')
-                    elif item.find_element_by_class_name('select_left').text == '票档':
+                    elif item.find_element(By.ID, 'select_left').text == '票档':
                         price = item
                         # print('\t票档定位成功')
 
@@ -170,7 +176,7 @@ class Concert(object):
                 raise Exception(u"***Error: 选择场次or票档不成功***")
 
             try:
-                ticket_num_up = box.find_element_by_class_name('cafe-c-input-number-handler-up')
+                ticket_num_up = box.find_element(By.ID, 'cafe-c-input-number-handler-up')
             except:
                 if buybutton_text == "选座购买":  # 选座购买没有增减票数键
                     buybutton.click()
@@ -237,7 +243,6 @@ class Concert(object):
             self.status = 6
             print(u'###成功提交订单,请手动支付###')
             self.time_end = time()
-
 
 if __name__ == '__main__':
     try:
